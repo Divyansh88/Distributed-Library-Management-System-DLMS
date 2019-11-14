@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -16,13 +17,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
 
-import DLMSApp.ServerInterface;
-import DLMSApp.ServerInterfaceHelper;
 import Servers.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
 
 /**
  * @author Divyansh
@@ -39,7 +46,6 @@ public class User {
 		boolean valid = true;
 		User user = new User();
 		
-		
 		while(valid) {
 			System.out.println("\nEnter Your Student ID: ");
 			user_id = choice.next();
@@ -48,50 +54,26 @@ public class User {
 			check = user_id.substring(0, 4);
 			
 			if(check.equalsIgnoreCase("CONU")) {
-				//registry = LocateRegistry.getRegistry(1111);
-				//siu = (ServerInterface) registry.lookup("Concordia");
-				try {
-					ORB orb = ORB.init(args, null);
-					// -ORBInitialPort 1050 -ORBInitialHost localhost
-					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Concordia"));
-				}
-				catch(Exception e) {
-					e.printStackTrace();
-				}
+				URL compURL = new URL("http://localhost:1111/comp?wsdl");
+				QName compQName = new QName("http://Servers/", "ConcordiaServerService");
+				Service compService = Service.create(compURL, compQName);
+				siu = compService.getPort(ServerInterface.class);
 				System.out.println("Concordia's user");
 				break;
 			}
 			else if(check.equalsIgnoreCase("MCGU")) {
-				//registry = LocateRegistry.getRegistry(2222);
-				//siu = (ServerInterface) registry.lookup("McGill");
-				try {
-					ORB orb = ORB.init(args, null);
-					// -ORBInitialPort 1050 -ORBInitialHost localhost
-					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("McGill"));
-				}
-				catch(Exception e) {
-					e.printStackTrace();
-				}
+				URL compURL = new URL("http://localhost:2222/comp?wsdl");
+				QName compQName = new QName("http://Servers/", "McGillServerService");
+				Service compService = Service.create(compURL, compQName);
+				siu = compService.getPort(ServerInterface.class);
 				System.out.println("McGill's's user");
 				break;
 			}
 			else if(check.equalsIgnoreCase("MONU")) {
-				//registry = LocateRegistry.getRegistry(3333);
-				//siu = (ServerInterface) registry.lookup("Montreal");
-				try {
-					ORB orb = ORB.init(args, null);
-					// -ORBInitialPort 1050 -ORBInitialHost localhost
-					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Montreal"));
-				}
-				catch(Exception e) {
-					e.printStackTrace();
-				}
+				URL compURL = new URL("http://localhost:3333/comp?wsdl");
+				QName compQName = new QName("http://Servers/", "MontrealServerService");
+				Service compService = Service.create(compURL, compQName);
+				siu = compService.getPort(ServerInterface.class);
 				System.out.println("Montreal's user");
 				break;
 			}

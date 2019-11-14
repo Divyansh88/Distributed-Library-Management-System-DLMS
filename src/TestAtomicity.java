@@ -1,9 +1,16 @@
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.rmi.RemoteException;
+
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
 
-import DLMSApp.ServerInterface;
-import DLMSApp.ServerInterfaceHelper;
+import Servers.ServerInterface;
+
 
 /**
  * @author Divyansh
@@ -17,19 +24,13 @@ import DLMSApp.ServerInterfaceHelper;
 public class TestAtomicity {
 	static ServerInterface siu = null;
 	
-	public static void main(String arg[]) {
+	public static void main(String arg[]) throws MalformedURLException, RemoteException {
 		String user_id = "CONU1111";
 		
-		try {
-			ORB orb = ORB.init(arg, null);
-			// -ORBInitialPort 1050 -ORBInitialHost localhost
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-			siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Concordia"));
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
+		URL compURL = new URL("http://localhost:1111/comp?wsdl");
+		QName compQName = new QName("http://Servers/", "ConcordiaServerService");
+		Service compService = Service.create(compURL, compQName);
+		siu = compService.getPort(ServerInterface.class);
 		System.out.println("Concordia's user");
 		
 		String item_id = "MCG2288";

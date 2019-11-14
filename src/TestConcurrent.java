@@ -1,9 +1,16 @@
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.rmi.RemoteException;
+
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
 
-import DLMSApp.ServerInterface;
-import DLMSApp.ServerInterfaceHelper;
+import Servers.ServerInterface;
+
 
 /**
  * @author Divyansh
@@ -14,10 +21,20 @@ public class TestConcurrent {
 	
 	public static void main(String arg[]) {
 		Runnable task1 = () -> {
-			firstUser(arg);
+			try {
+				firstUser(arg);
+			} catch (MalformedURLException | RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		};
 		Runnable task2 = () -> {
-			secondUser(arg);
+			try {
+				secondUser(arg);
+			} catch (MalformedURLException | RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		};
 				
 		Thread thread1 = new Thread(task1);
@@ -27,19 +44,13 @@ public class TestConcurrent {
 		
 	}
 	
-	public static void firstUser(String arg[]) {
+	public static void firstUser(String arg[]) throws MalformedURLException, RemoteException {
 		String user_id = "CONU1111";
 		
-		try {
-			ORB orb = ORB.init(arg, null);
-			// -ORBInitialPort 1050 -ORBInitialHost localhost
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-			siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Concordia"));
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
+		URL compURL = new URL("http://localhost:1111/comp?wsdl");
+		QName compQName = new QName("http://Servers/", "ConcordiaServerService");
+		Service compService = Service.create(compURL, compQName);
+		siu = compService.getPort(ServerInterface.class);
 		System.out.println("Concordia's user");
 		
 		String item_id = "CON1122";
@@ -49,19 +60,13 @@ public class TestConcurrent {
 		System.out.println("User 1:"+response);
 	}
 	
-	public static void secondUser(String arg[]) {
+	public static void secondUser(String arg[]) throws MalformedURLException, RemoteException {
 		String user_id = "MCGU1111";
 		
-		try {
-			ORB orb = ORB.init(arg, null);
-			// -ORBInitialPort 1050 -ORBInitialHost localhost
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-			siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("McGill"));
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
+		URL compURL = new URL("http://localhost:2222/comp?wsdl");
+		QName compQName = new QName("http://Servers/", "McGillServerService");
+		Service compService = Service.create(compURL, compQName);
+		siu = compService.getPort(ServerInterface.class);
 		System.out.println("McGill's's user");
 		
 		String item_id = "CON1122";

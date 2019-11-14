@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.xml.ws.Endpoint;
+
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContextExt;
@@ -27,16 +29,19 @@ import org.omg.CosNaming.NamingContextExtHelper;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 
-import DLMSApp.ServerInterface;
-import DLMSApp.ServerInterfaceHelper;
-import DLMSApp.ServerInterfacePOA;
 import Others.Books;
+
+import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+
+@WebService(endpointInterface = "Servers.ServerInterface")
+@SOAPBinding(style = SOAPBinding.Style.RPC)
 
 /**
  * @author Divyansh
  *
  */
-public class ConcordiaServer extends ServerInterfacePOA {
+public class ConcordiaServer implements ServerInterface {
 	
 	String return_msg;
 	static String path = "src\\Log files";
@@ -668,45 +673,9 @@ public class ConcordiaServer extends ServerInterfacePOA {
 		return reply_message;
 	}
 	
-	private ORB orb;
-
-	public void setORB(ORB orb_val) {
-		orb = orb_val;
-	}
-	
-	public void activeServer(String arg[]) throws RemoteException {
-		try {
-			// create and initialize the ORB //// get reference to rootpoa &amp; activate
-			// the POAManager
-			ORB orb = ORB.init(arg, null);
-			// -ORBInitialPort 1050 -ORBInitialHost localhost
-			POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-			rootpoa.the_POAManager().activate();
-
-			// create servant and register it with the ORB
-			ConcordiaServer stub = new ConcordiaServer();
-			stub.setORB(orb);
-
-			// get object reference from the servant
-			org.omg.CORBA.Object ref = rootpoa.servant_to_reference(stub);
-			ServerInterface href = ServerInterfaceHelper.narrow(ref);
-
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-
-			NameComponent path[] = ncRef.to_name("Concordia");
-			ncRef.rebind(path, href);
-
-			// wait for invocations from clients
-			for (;;) {
-				orb.run();
-			}
-		}
-
-		catch (Exception e) {
-			System.err.println("ERROR: " + e);
-			e.printStackTrace(System.out);
-		}
+	public void activeServer() throws RemoteException {
+		ConcordiaServer stub = new ConcordiaServer();
+		Endpoint endpoint = Endpoint.publish("http://localhost:1111/comp", stub);
 		System.out.println("Concordia's server is started.");
 	}
 		
@@ -724,7 +693,7 @@ public class ConcordiaServer extends ServerInterfacePOA {
 		};
 		Runnable task2 = () -> {
 			try {
-				con.activeServer(arg);
+				con.activeServer();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
