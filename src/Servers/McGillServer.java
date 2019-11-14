@@ -9,6 +9,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.SocketException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -19,29 +20,39 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextExtHelper;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAHelper;
+
+import DLMSApp.ServerInterface;
+import DLMSApp.ServerInterfaceHelper;
+import DLMSApp.ServerInterfacePOA;
 import Others.Books;
 
 /**
  * @author Divyansh
  *
  */
-public class McGillServer extends UnicastRemoteObject implements ServerInterface {
+public class McGillServer extends ServerInterfacePOA {
 	
 	String return_msg;
-	static String path = "C:\\Users\\ADMIN\\eclipse-workspace\\DLMS\\src\\Log files";
-	static String path1 = "C:\\Users\\ADMIN\\eclipse-workspace\\DLMS\\src\\Log files\\";
+	static String path = "src\\Log files";
+	static String path1 = "src\\Log files\\";
 	 
 	Books book = null;
 	static Map<String,Books> book_shelf = new HashMap<String,Books>();
 	static Map<String,ArrayList<String>> waitlist = new HashMap<String,ArrayList<String>>();
 	static Map<String,ArrayList> borrow = new HashMap<String,ArrayList>(); 
 	
-	public McGillServer() throws RemoteException {
+	public McGillServer() {
 		super();
 	}
 	
 	@Override
-	public synchronized String addItem(String manager_id,String item_id,String item_name,int quantity) throws RemoteException {
+	public synchronized String addItem(String manager_id,String item_id,String item_name,int quantity) {
 		boolean flag = false;
 		String return_value = "";
 		book = new Books(item_id, item_name, quantity);
@@ -129,11 +140,11 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	
 
 	@Override
-	public synchronized String removeItem(String manager_id, String item_id, int quantity) throws RemoteException {
+	public synchronized String removeItem(String manager_id, String item_id, int quantity) {
 		String book_id;
 		
 		Books book = book_shelf.get(item_id);
-		if(item_id.equalsIgnoreCase(book.getItemId())) {
+		if(book_shelf.get(item_id)!=null && item_id.equalsIgnoreCase(book.getItemId())) {
 			book_id = item_id;
 			if(quantity == -1) {
 				try {
@@ -184,7 +195,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	}
 	
 	@Override
-	public synchronized String listItemAvailability(String manager_id) throws RemoteException {
+	public synchronized String listItemAvailability(String manager_id) {
 		String message;
 		return_msg = "";
 		for(Map.Entry<String,Books> entry: book_shelf.entrySet()){
@@ -205,7 +216,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		
 		
 	@Override
-	public synchronized String borrowItem(String user_id, String item_id, int number_of_days) throws RemoteException {
+	public synchronized String borrowItem(String user_id, String item_id, int number_of_days) {
 		String server,return_value = "",req_message,return_check1="";
 		int check;
 		
@@ -280,7 +291,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 			return_value = "Book is already borrowed by the user.";
 		}
 		else {
-			if(item_id.equalsIgnoreCase(book.getItemId())) {
+			if(book_shelf.containsKey(item_id)) {
 				if(book.getQuantity()>0) {
 					for(String entry: borrow.keySet()){
 							if(entry.contains(user_id)) {
@@ -321,7 +332,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	
 	
 	@Override
-	public synchronized String findItem(String user_id, String item_name) throws RemoteException {
+	public synchronized String findItem(String user_id, String item_name) {
 		String req_message,reply1,reply2,reply3,combine_message;
 		req_message = "2"+user_id+item_name;
 		
@@ -356,7 +367,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	
 	
 	@Override
-	public synchronized String returnItem(String user_id, String item_id) throws RemoteException {
+	public synchronized String returnItem(String user_id, String item_id) {
 		String server,return_value = "",return_value1 = "",req_message;
 		req_message = "3"+user_id+item_id;
 		server = item_id.substring(0, 3);
@@ -483,7 +494,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	
 	
 	@Override
-	public synchronized String addToQueue(String user_id, String item_id) throws RemoteException {
+	public synchronized String addToQueue(String user_id, String item_id) {
 		String server,return_value = "",req_message;
 		req_message = "4"+user_id+item_id;
 		server = item_id.substring(0, 3);
@@ -558,10 +569,11 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		int number_of_days;
 		try {
 			aSocket = new DatagramSocket(2222);
-			byte[] buffer = new byte[100000];// to stored the received data from
-											// the client.
+			
 			System.out.println("Server 2222 Started............");
 			while (true) {
+				byte[] buffer = new byte[100000];// to stored the received data from
+				// the client.
 				DatagramPacket request = new DatagramPacket(buffer, buffer.length);
 				// Server waits for the request to
 				// come------------------------------------------------------------------
@@ -654,12 +666,46 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		return reply_message;
 	}
 	
-	public void activeServer() throws RemoteException {
-		String registry_URL;
-		McGillServer stub = new McGillServer();
-		Registry registry1 = LocateRegistry.createRegistry(2222);
-		registry1.rebind("McGill", stub);
-		System.out.println("McGill's server(2222) is started.");
+	private ORB orb;
+
+	public void setORB(ORB orb_val) {
+		orb = orb_val;
+	}
+	
+	public void activeServer(String arg[]) throws RemoteException {
+		try {
+			// create and initialize the ORB //// get reference to rootpoa &amp; activate
+			// the POAManager
+			ORB orb = ORB.init(arg, null);
+			// -ORBInitialPort 1050 -ORBInitialHost localhost
+			POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+			rootpoa.the_POAManager().activate();
+
+			// create servant and register it with the ORB
+			McGillServer stub = new McGillServer();
+			stub.setORB(orb);
+
+			// get object reference from the servant
+			org.omg.CORBA.Object ref = rootpoa.servant_to_reference(stub);
+			ServerInterface href = ServerInterfaceHelper.narrow(ref);
+
+			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+			NameComponent path[] = ncRef.to_name("McGill");
+			ncRef.rebind(path, href);
+
+			// wait for invocations from clients
+			for (;;) {
+				orb.run();
+			}
+		}
+
+		catch (Exception e) {
+			System.err.println("ERROR: " + e);
+			e.printStackTrace(System.out);
+		}
+		System.out.println("McGill's server is started.");
 	}
 		
 	public static void main(String arg[]) throws RemoteException, MalformedURLException, IOException {
@@ -676,8 +722,8 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		};
 		Runnable task2 = () -> {
 			try {
-				mcg.activeServer();
-			} catch (RemoteException e) {
+				mcg.activeServer(arg);
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		};
@@ -709,8 +755,8 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 	}
 
 	@Override
-	public synchronized String exchangeItem(String user_id, String new_item_id, String old_item_id) throws RemoteException {
-		String server_new, server_old, return_value1 = "", return_value2 = "",return_value3 = "", return_value4 = "", req_message1, req_message2, return_message = "";
+	public synchronized String exchangeItem(String user_id, String new_item_id, String old_item_id) {
+		String server_new, server_old, return_value1 = "", return_value2 = "",return_value3 = "", return_value4 = "", return_value5 = "", return_value6 = "", req_message1, req_message2,  req_message3, return_message = "";
 		int default_days = 10;
 		
 		req_message1 = "6"+user_id+new_item_id;
@@ -736,24 +782,51 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		else if(server_old.equalsIgnoreCase("MON")) {
 			return_value2 = sendMessage(3333, req_message2);
 		}
-		System.out.println("return value 1:::"+return_value1);
-		System.out.println("return value 2:::"+return_value2);
 		
-		if(return_value1.equalsIgnoreCase("ok") && return_value2.equalsIgnoreCase("ok")) {
-			try {
-				return_value4 = returnItem(user_id, old_item_id);
-			} catch (RemoteException e) {	
+		req_message3 = "5"+user_id+new_item_id+default_days;      
+		server_new = new_item_id.substring(0, 3);
+		if(server_new.equalsIgnoreCase("MCG")) {
+			return_value6 = "ok";
+		}
+		else if(!server_new.equalsIgnoreCase("MCG")) {
+			
+			if(server_new.equalsIgnoreCase("CON")) {
+				return_value6 = sendMessage(1111, req_message3);
+			}
+			else if(server_new.equalsIgnoreCase("MON")) {
+				return_value6 = sendMessage(3333, req_message3);
 			}
 			
-			try {
-				return_value3 = borrowItem(user_id, new_item_id, default_days);
-			} catch (RemoteException e) {
+			if(server_old.equalsIgnoreCase(server_new) && return_value6.equalsIgnoreCase("not ok")) {
+				return_value6 = "ok";
 			}
+			
+		}
+		System.out.println("Check availability:::"+return_value1);
+		System.out.println("Check borrow:::"+return_value2);
+		System.out.println("Check single book borrow:::"+return_value6);
+		
+		if(return_value1.equalsIgnoreCase("ok") && return_value2.equalsIgnoreCase("ok") && return_value6.equalsIgnoreCase("ok")) {
+			return_value4 = returnItem(user_id, old_item_id);
+			
+			return_value3 = borrowItem(user_id, new_item_id, default_days);
+			
+			System.out.println(return_value4+"                  "+return_value3);
 			
 			return_message = "Successfully exchange "+new_item_id+" with "+old_item_id;
+//			if(return_value4.equalsIgnoreCase("Successfully Returned") && return_value3.equalsIgnoreCase(new_item_id+" is successfully borrowed.")) {
+//				return_message = "Successfully exchange "+new_item_id+" with "+old_item_id;
+//			}
+//			else {
+//				return_message = "Fail exchange "+new_item_id+" with "+old_item_id;
+//				if(return_value3.equalsIgnoreCase("User can only borrow 1 item from other server.")) {
+//					return_value5 = borrowItem(user_id, old_item_id, default_days);
+//					System.out.println(return_value5);
+//				}
+//			}
 		}
 		else {
-			return_message = "Exchange failed.";
+			return_message = "Fail exchange "+new_item_id+" with "+old_item_id;
 		}
 		
 		System.out.println(return_message);
@@ -763,13 +836,16 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		return return_message;
 	}
 	
-	public String checkAvailable(String user_id, String new_item_id) {
+	public synchronized String checkAvailable(String user_id, String new_item_id) {
 		String check = "";
 		Books book = book_shelf.get(new_item_id);
 
-		if(new_item_id.equalsIgnoreCase(book.getItemId())) {
+		if(book_shelf.containsKey(new_item_id)) {
 			if(book.getQuantity()>0) {
 				check = "ok";
+			}
+			else {
+				check = "not ok";
 			}
 		}
 		else {
@@ -779,7 +855,7 @@ public class McGillServer extends UnicastRemoteObject implements ServerInterface
 		return check;
 	}
 
-	public String checkBorrow(String user_id, String old_item_id) {
+	public synchronized String checkBorrow(String user_id, String old_item_id) {
 		String check;
 		int count = 0;
 

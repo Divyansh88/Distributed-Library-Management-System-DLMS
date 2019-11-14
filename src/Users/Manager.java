@@ -15,6 +15,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextExtHelper;
+
+import DLMSApp.ServerInterface;
+import DLMSApp.ServerInterfaceHelper;
 import Servers.*;
 
 /**
@@ -23,7 +29,7 @@ import Servers.*;
  */
 public class Manager {
 	static ServerInterface siu = null;
-	static String path = "C:\\Users\\ADMIN\\eclipse-workspace\\DLMS\\src\\Log files";
+	static String path = "src\\Log files";
 	static String manager_id, message, check = "";
 	static Scanner choice = new Scanner(System.in);
 	
@@ -40,20 +46,50 @@ public class Manager {
 			check = manager_id.substring(0, 4);
 			
 			if(check.equalsIgnoreCase("CONM")) {
-				registry = LocateRegistry.getRegistry(1111);
-				siu = (ServerInterface) registry.lookup("Concordia");
+//				registry = LocateRegistry.getRegistry(1111);
+//				siu = (ServerInterface) registry.lookup("Concordia");
+				try {
+					ORB orb = ORB.init(args, null);
+					// -ORBInitialPort 1050 -ORBInitialHost localhost
+					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Concordia"));
+				}
+				catch(Exception e) {
+					e.printStackTrace();
+				}
 				System.out.println("Concordia's manager");
 				break;
 			}
 			else if(check.equalsIgnoreCase("MCGM")) {
-				registry = LocateRegistry.getRegistry(2222);
-				siu = (ServerInterface) registry.lookup("McGill");
+//				registry = LocateRegistry.getRegistry(2222);
+//				siu = (ServerInterface) registry.lookup("McGill");
+				try {
+					ORB orb = ORB.init(args, null);
+					// -ORBInitialPort 1050 -ORBInitialHost localhost
+					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("McGill"));
+				}
+				catch(Exception e) {
+					e.printStackTrace();
+				}
 				System.out.println("McGill's's manager");
 				break;
 			}
 			else if(check.equalsIgnoreCase("MONM")) {
-				registry = LocateRegistry.getRegistry(3333);
-				siu = (ServerInterface) registry.lookup("Montreal");
+//				registry = LocateRegistry.getRegistry(3333);
+//				siu = (ServerInterface) registry.lookup("Montreal");
+				try {
+					ORB orb = ORB.init(args, null);
+					// -ORBInitialPort 1050 -ORBInitialHost localhost
+					org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+					NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+					siu = (ServerInterface) ServerInterfaceHelper.narrow(ncRef.resolve_str("Montreal"));
+				}
+				catch(Exception e) {
+					e.printStackTrace();
+				}
 				System.out.println("Montreal's manager");
 				break;
 			}
@@ -156,10 +192,6 @@ public class Manager {
 		appendUsingFileWriter(path, print_response);		
 	}
 
-	/**
-	 * @param filePath
-	 * @param text
-	 */
 	public static void appendUsingFileWriter(String filePath, String text) {
 		File file = new File(filePath);
 		FileWriter fr = null;

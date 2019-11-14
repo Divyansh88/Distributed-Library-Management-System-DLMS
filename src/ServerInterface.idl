@@ -1,0 +1,12 @@
+module DLMSApp{
+	interface ServerInterface{
+		string removeItem(in string manager_id, in string item_id, in long quantity);
+		string addItem(in string manager_id, in string item_id, in string item_name, in long quantity);
+		string listItemAvailability(in string manager_id);
+		string borrowItem(in string user_id, in string item_id, in long number_of_days);
+		string findItem(in string user_id, in string item_name);
+		string returnItem(in string user_id, in string item_id);
+		string addToQueue(in string user_id, in string item_id);
+		string exchangeItem(in string user_id, in string new_item_id, in string old_item_id);
+	};
+};
